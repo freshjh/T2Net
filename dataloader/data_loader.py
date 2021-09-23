@@ -10,9 +10,11 @@ class CreateDataset(data.Dataset):
     def initialize(self, opt):
         self.opt = opt
 
+        # 图像路径
         self.img_source_paths, self.img_source_size = make_dataset(opt.img_source_file)
         self.img_target_paths, self.img_target_size = make_dataset(opt.img_target_file)
 
+        # GT路径
         if self.opt.isTrain:
             self.lab_source_paths, self.lab_source_size = make_dataset(opt.lab_source_file)
             # for visual results, not for training
@@ -23,7 +25,9 @@ class CreateDataset(data.Dataset):
 
     def __getitem__(self, item):
         index = random.randint(0, self.img_target_size - 1)
+        # 读image
         img_source_path = self.img_source_paths[item % self.img_source_size]
+        # 两个域的数据是否一一对应
         if self.opt.dataset_mode == 'paired':
             img_target_path = self.img_target_paths[item % self.img_target_size]
         elif self.opt.dataset_mode == 'unpaired':
@@ -31,11 +35,14 @@ class CreateDataset(data.Dataset):
         else:
             raise ValueError('Data mode [%s] is not recognized' % self.opt.dataset_mode)
 
+        # arr = np.load(depth_path)
+        # depth_gt = Image.fromarray(arr)
         img_source = Image.open(img_source_path).convert('RGB')
         img_target = Image.open(img_target_path).convert('RGB')
         img_source = img_source.resize([self.opt.loadSize[0], self.opt.loadSize[1]], Image.BICUBIC)
         img_target = img_target.resize([self.opt.loadSize[0], self.opt.loadSize[1]], Image.BICUBIC)
 
+        # 读GT
         if self.opt.isTrain:
             lab_source_path = self.lab_source_paths[item % self.lab_source_size]
             if self.opt.dataset_mode == 'paired':
@@ -49,6 +56,7 @@ class CreateDataset(data.Dataset):
             lab_source = lab_source.resize([self.opt.loadSize[0], self.opt.loadSize[1]], Image.BICUBIC)
             lab_target = lab_target.resize([self.opt.loadSize[0], self.opt.loadSize[1]], Image.BICUBIC)
 
+        # 数据增强
             img_source, lab_source, scale = paired_transform(self.opt, img_source, lab_source)
             img_source = self.transform_augment(img_source)
             lab_source = self.transform_no_augment(lab_source)
