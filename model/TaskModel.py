@@ -59,42 +59,41 @@ class TNetModel(BaseModel):
         self.lab_s = Variable(self.lab_source)
         self.lab_t = Variable(self.lab_target)
 
-    def foreward_G_basic(self, net_G, img_s, img_t):
+    def foreward_G_basic(self, net_G, img_s):
 
-        img = torch.cat([img_s, img_t], 0)
-        fake = net_G(img)
+
+        fake = net_G(img_s)
 
         size = len(fake)
 
-        f_s, f_t = fake[0].chunk(2)
+        f_s = fake[0]
         img_fake = fake[1:]
 
         img_s_fake = []
-        img_t_fake = []
+
 
         for img_fake_i in img_fake:
-            img_s, img_t = img_fake_i.chunk(2)
+            img_s = img_fake_i
             img_s_fake.append(img_s)
-            img_t_fake.append(img_t)
 
-        return img_s_fake, img_t_fake, f_s, f_t, size
+        return img_s_fake, f_s, size
 
     def backward_task(self):
 
-        self.lab_s_g, self.lab_t_g, self.lab_f_s, self.lab_f_t, size = \
-            self.foreward_G_basic(self.net_img2task, self.img_s, self.img_t)
+        '源域预测，目标域预测，源域特征，目标域特征，batchsize'
+        self.lab_s_g, self.lab_f_s, size = \
+            self.foreward_G_basic(self.net_img2task, self.img_s)
 
+        'lab_s is the gt of src domain'
         lab_real = task.scale_pyramid(self.lab_s, size-1)
         task_loss = 0
+        'supervised training of src data'
         for (lab_fake_i, lab_real_i) in zip(self.lab_s_g, lab_real):
             task_loss += self.l1loss(lab_fake_i, lab_real_i)
 
-        self.loss_lab_s = task_loss * self.opt.lambda_rec_lab
+        self.loss_lab_s = task_loss
 
-        img_real = task.scale_pyramid(self.img_t, size - 1)
-        self.loss_lab_smooth = task.get_smooth_weight(self.lab_t_g, img_real, size - 1) * self.opt.lambda_smooth
-
-        total_loss = self.loss_lab_s + self.loss_lab_smooth
+        total_loss = self.loss_lab_s
 
         total_loss.backward()
 
@@ -108,6 +107,7 @@ class TNetModel(BaseModel):
 
     def validation_target(self):
 
+        # TODO 改成在目标域评测
         lab_real = task.scale_pyramid(self.lab_t, len(self.lab_t_g))
         task_loss = 0
         for (lab_fake_i, lab_real_i) in zip(self.lab_t_g, lab_real):
