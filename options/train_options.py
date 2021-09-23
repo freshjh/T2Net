@@ -50,5 +50,7 @@ class TrainOptions(BaseOptions):
                                  help='transform and task network training end-to-end or separate')
         self.parser.add_argument('--pool_size', type=int, default=20,
                                  help='the size of image buffer that stores previously generated images')
+        self.parser.add_argument('--filenames_file',            type=str,   help='path to the filenames text file', required=True)
+        self.parser.add_argument('--filenames_file_tgt', type=str, help='path to the tgt filenames text file', required=True)
 
         self.isTrain = True
