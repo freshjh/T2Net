@@ -6,6 +6,7 @@ from util.visualizer import Visualizer
 
 opt = TrainOptions().parse()
 
+
 dataset = dataloader(opt)
 dataset_size = len(dataset) * opt.batchSize
 print('training images = %d' % dataset_size)
@@ -22,8 +23,8 @@ for epoch in range(opt.epoch_count, opt.niter+opt.niter_decay+1):
     for i, data in enumerate(dataset):
         'data preparation'
         iter_start_time = time.time()
-        total_steps += opt.batchSize
-        epoch_iter += opt.batchSize
+        total_steps += opt.batchSize    # 总迭代
+        epoch_iter += opt.batchSize     # epoch内迭代
         model.set_input(data)
 
         'forward and backward'
