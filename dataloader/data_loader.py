@@ -4,6 +4,7 @@ import torchvision.transforms as transforms
 import torch.utils.data as data
 from .image_folder import make_dataset
 import torchvision.transforms.functional as F
+import os
 
 
 class CreateDataset(data.Dataset):
@@ -13,6 +14,10 @@ class CreateDataset(data.Dataset):
         # 图像路径
         self.img_source_paths, self.img_source_size = make_dataset(opt.img_source_file)
         self.img_target_paths, self.img_target_size = make_dataset(opt.img_target_file)
+        with open(opt.filenames_file, 'r') as f:
+            self.srcsample_paths = f.readlines()
+        with open(opt.filenames_file_tgt, 'r') as f:
+            self.tgtsample_paths = f.readlines()
 
         # GT路径
         if self.opt.isTrain:
@@ -26,12 +31,14 @@ class CreateDataset(data.Dataset):
     def __getitem__(self, item):
         index = random.randint(0, self.img_target_size - 1)
         # 读image
-        img_source_path = self.img_source_paths[item % self.img_source_size]
+        # img_source_path = self.img_source_paths[item % self.img_source_size]
+        img_source_path = os.path.join(self.args.data_path_tgt, "./" + self.srcsample_paths[item % self.img_source_size].split()[0])
         # 两个域的数据是否一一对应
         if self.opt.dataset_mode == 'paired':
             img_target_path = self.img_target_paths[item % self.img_target_size]
         elif self.opt.dataset_mode == 'unpaired':
-            img_target_path = self.img_target_paths[index]
+            # img_target_path = self.img_target_paths[index]
+            img_target_path = os.path.join(self.args.data_path, "./" + self.tgtsample_paths[index].split()[0])
         else:
             raise ValueError('Data mode [%s] is not recognized' % self.opt.dataset_mode)
 
@@ -44,11 +51,13 @@ class CreateDataset(data.Dataset):
 
         # 读GT
         if self.opt.isTrain:
-            lab_source_path = self.lab_source_paths[item % self.lab_source_size]
+            # lab_source_path = self.lab_source_paths[item % self.lab_source_size]
+            lab_source_path = os.path.join(self.args.gt_path, "./" + self.srcsample_paths[item % self.img_source_size].split()[1])
             if self.opt.dataset_mode == 'paired':
                 lab_target_path = self.lab_target_paths[item % self.img_target_size]
             elif self.opt.dataset_mode == 'unpaired':
-                lab_target_path = self.lab_target_paths[index]
+                # lab_target_path = self.lab_target_paths[index]
+                lab_target_path = os.path.join(self.args.gt_path_tgt, "./" + self.tgtsample_paths[index].split()[1])
             else:
                 raise ValueError('Data mode [%s] is not recognized' % self.opt.dataset_mode)
             lab_source = Image.open(lab_source_path)#.convert('RGB')
