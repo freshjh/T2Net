@@ -43,11 +43,11 @@ class T2NetModel(BaseModel):
             self.l1loss = torch.nn.L1Loss()
             self.nonlinearity = torch.nn.ReLU()
             # initialize optimizers
-            self.optimizer_T2Net = torch.optim.Adam([{'params': filter(lambda p: p.requires_grad, self.net_s2t.parameters())},
+            self.optimizer_T2Net = torch.optim.Adam([
                                                      {'params': filter(lambda p: p.requires_grad, self.net_img2task.parameters()),
                                                       'lr': opt.lr_task, 'betas': (0.95, 0.999)}],
                                                     lr=opt.lr_trans, betas=(0.5, 0.9))
-            self.optimizer_D = torch.optim.Adam(itertools.chain(filter(lambda p: p.requires_grad, self.net_img_D.parameters()),
+            self.optimizer_D = torch.optim.Adam(itertools.chain(
                                                                 filter(lambda p: p.requires_grad, self.net_f_D.parameters())),
                                                 lr=opt.lr_trans, betas=(0.5, 0.9))
             self.optimizers = []
@@ -159,10 +159,10 @@ class T2NetModel(BaseModel):
 
     def backward_translated2depth(self):
 
-        # task network
+        # 源域训练
         network._freeze(self.net_img_D, self.net_f_D)
-        network._unfreeze(self.net_s2t, self.net_img2task)
-        fake = self.net_img2task.forward(self.img_s2t[-1])
+        network._unfreeze(self.net_img2task)
+        fake = self.net_img2task.forward(self.img_s)
 
         size=len(fake)
         self.lab_f_s = fake[0]
@@ -189,9 +189,10 @@ class T2NetModel(BaseModel):
 
     def backward_real2depth(self):
 
-        # image2depth
+        # 目标域训练
         network._freeze(self.net_s2t, self.net_img_D, self.net_f_D)
         network._unfreeze(self.net_img2task)
+        'fake = [feat, depth]'
         fake = self.net_img2task.forward(self.img_t)
         size = len(fake)
 
@@ -204,6 +205,8 @@ class T2NetModel(BaseModel):
 
         total_loss = self.loss_lab_smooth
 
+        # total_loss = self.l1loss(lab_fake_i, self.lab_t_g)
+
         total_loss.backward()
 
     def optimize_parameters(self, epoch_iter):
@@ -211,7 +214,7 @@ class T2NetModel(BaseModel):
         self.forward()
         # T2Net
         self.optimizer_T2Net.zero_grad()
-        self.backward_synthesis2real()
+        # self.backward_synthesis2real()
         'estimate depth of target domain sample'
         self.backward_translated2depth()
         'estimate depth of source domain sample'
@@ -220,7 +223,7 @@ class T2NetModel(BaseModel):
         # Discriminator
         self.optimizer_D.zero_grad()
         self.backward_D_feature()
-        self.backward_D_image()
+        # self.backward_D_image()
         if epoch_iter % 5 == 0:
             self.optimizer_D.step()
             for p in self.net_f_D.parameters():
